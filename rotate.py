@@ -1,5 +1,6 @@
+import logging
 import os
-from pathlib import Path
+from concurrent.futures import ProcessPoolExecutor
 
 import click
 import cv2
@@ -8,38 +9,9 @@ from jpegtran import JPEGImage
 
 
 class Rotator:
-    def __init__(self, directory: str, overwrite_files: bool=False):
+    def __init__(self, overwrite_files: bool=False):
         self.detector = dlib.get_frontal_face_detector()
-        self.directory = directory
-        self.overwrite_files =overwrite_files
-
-    def analyze_images(self):
-        # Recursively loop through all files and subdirectories.
-        # os.walk() is a recursive generator.
-        # The variable "root" is dynamically updated as walk() recursively traverses directories.
-        images = []
-        for root_dir, sub_dir, files in os.walk(self.directory):
-            for file_name in files:
-                if file_name.lower().endswith((".jpeg", ".jpg")):
-                    file_path = str(os.path.join(root_dir, file_name))
-                    images.append(file_path)
-
-        # Analyze each image file path to identify the amount of rotation.
-        rotations = {}
-        with click.progressbar(images, label=f"Analyzing {len(images)} Images...") as filepaths:
-            for filepath in filepaths:
-                rotation = self.analyze_image(filepath)
-                if rotation:
-                    rotations[filepath] = rotation
-
-        # For images that need to be rotated, rotate and save them.
-        with click.progressbar(rotations.items(), label=f"Rotating {len(rotations)} Images...") as items:
-          for filepath, rotation in items:
-                print(f" - {filepath} (Rotated {rotation} Degrees)")
-                img = JPEGImage(filepath)
-                img = img.rotate(rotation)
-                self.save_image(img, filepath)
-
+        self.overwrite_files = overwrite_files
 
     def analyze_image(self, filepath: str) -> int:
         """Cycles through 4 image rotations of 90 degrees.
@@ -67,12 +39,42 @@ class Rotator:
         image.save(filepath)
 
 
+def init_worker(overwrite: bool=False):
+    global rotator
+    print("Initialize worker...")
+    rotator = Rotator(overwrite)
+
+
+def worker(filepath: str):
+    global rotator
+    rotation = rotator.analyze_image(filepath)
+    if rotation:
+        print(f" - {filepath} (Rotated {rotation} Degrees)")
+        img = JPEGImage(filepath)
+        img = img.rotate(rotation)
+        rotator.save_image(img, filepath)
+
+
 @click.command()
 @click.argument("directory", type=click.STRING, required=True)
-@click.option("--overwrite", type=click.BOOL, default=False)
-def cli(directory: str, overwrite: bool=False):
-    rotator = Rotator(directory, overwrite)
-    rotator.analyze_images()
+@click.option("--overwrite", type=click.BOOL, default=False, help="If true, overwrites original image file with rotated version. Default=False")
+@click.option("--max_workers", type=click.INT, default=None, help="The number of parallel processes to run. Default=number of CPU cores.")
+def cli(directory: str, overwrite: bool=False, max_workers: int=None):
+    # Recursively loop through all files and subdirectories.
+    # os.walk() is a recursive generator.
+    # The variable "root" is dynamically updated as walk() recursively traverses directories.
+    images = []
+    for root_dir, sub_dir, files in os.walk(directory):
+        for file_name in files:
+            if file_name.lower().endswith((".jpeg", ".jpg")):
+                file_path = str(os.path.join(root_dir, file_name))
+                images.append(file_path)
+
+    print(f"Processing {len(images)} images...")
+
+    # Analyze each image file path to identify the amount of rotation.
+    with ProcessPoolExecutor(max_workers=max_workers, initializer=init_worker, initargs=(overwrite,)) as executor:
+        list(executor.map(worker, images))
 
 
 if __name__ == "__main__":
