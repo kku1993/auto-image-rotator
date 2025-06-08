@@ -4,6 +4,7 @@
 
 - This fork implements lossless JPEG transformation and removes png support.
 - Changes the command line signature
+- Removed docker setup
 
 ## Overview
 This app uses the OpenCV and Dlib computer vision libraries to auto rotate images based on detected human faces.
@@ -16,23 +17,21 @@ Currently, this is only effective for images that contain one or more face. In t
 
 ## Setup
 
-#### Docker
-1. Install [Docker](https://www.docker.com/get-started) so we can build and run the app
+#### Python venv
 
-2. Build the app's Docker image (this takes a few minutes to complete while it builds Dlib's native C extension for Python):
 ```
-docker-compose build app
+apt-get update
+apt-get install cmake libjpeg8-dev libturbojpeg-dev
+python3 -m venv venv
+source ./venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ## Usage
 After the one-time setup, rotating a directory of images is as simple as running this command:
 
 ```
-IMAGES_PATH=/path/to/your/images/folder docker-compose run app
+python3 rotate.py {IMAGE_PATH}
 ```
 
-By default, rotated images are saved as new files with a `*-rotated` filename pattern in your `IMAGES_PATH` directory. If you're comfortable overwriting your original files with rotated versions you may prefix the command with the `OVERWRITE_FILES` param like so:
-
-```
-IMAGES_PATH=/path/to/your/images/folder OVERWRITE_FILES=1 docker-compose run app
-```
+By default, rotated images are saved as new files with a `*-rotated` filename pattern in your `IMAGES_PATH` directory. If you're comfortable overwriting your original files with rotated versions you may use the `--overwrite` param.
