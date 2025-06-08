@@ -9,10 +9,9 @@ from PIL import Image, ImageFile
 
 
 class Rotator:
-    IMAGES_DIRECTORY = "/images"
-
-    def __init__(self, overwrite_files: bool=False):
+    def __init__(self, directory: str, overwrite_files: bool=False):
         self.detector = dlib.get_frontal_face_detector()
+        self.directory = directory
         self.overwrite_files =overwrite_files
 
     def analyze_images(self):
@@ -20,7 +19,7 @@ class Rotator:
         # os.walk() is a recursive generator.
         # The variable "root" is dynamically updated as walk() recursively traverses directories.
         images = []
-        for root_dir, sub_dir, files in os.walk(self.IMAGES_DIRECTORY):
+        for root_dir, sub_dir, files in os.walk(self.directory):
             for file_name in files:
                 if file_name.lower().endswith((".jpeg", ".jpg", ".png")):
                     file_path = str(os.path.join(root_dir, file_name))
@@ -36,15 +35,14 @@ class Rotator:
                 if rotation:
                     rotations[filepath] = rotation
 
-        print(f"{len(rotations)} Images Rotated")
-        for filepath, rotation in rotations.items():
-            print(f" - {filepath} (Rotated {rotation} Degrees)")
+        with click.progressbar(rotations.items(), label=f"Rotating {len(rotations)} Images...") as items:
+          for filepath, rotation in items:
+                print(f" - {filepath} (Rotated {rotation} Degrees)")
 
     def analyze_image(self, image: ImageFile, filepath: str) -> int:
         """Cycles through 4 image rotations of 90 degrees.
            Saves the image at the current rotation if faces are detected.
         """
-
         for cycle in range(0, 4):
             if cycle > 0:
                 # Rotate the image an additional 90 degrees for each non-zero cycle.
@@ -57,9 +55,7 @@ class Rotator:
             if len(faces) == 0:
                 continue
 
-            # Save the image only if it has been rotated.
             if cycle > 0:
-                self.save_image(image, filepath)
                 return cycle * 90
 
         return 0
@@ -69,7 +65,6 @@ class Rotator:
            If opened with OpenCV, the saved image is a much larger file size than the original
            (regardless of whether saved via OpenCV or Pillow).
         """
-
         return Image.open(filepath)
 
     def save_image(self, image: ImageFile, filepath: str) -> bool:
@@ -86,9 +81,10 @@ class Rotator:
 
 
 @click.command()
-@click.argument("overwrite_files", type=click.BOOL, default=False)
-def cli(overwrite_files: bool=False):
-    rotator = Rotator(overwrite_files)
+@click.argument("directory", type=click.STRING, required=True)
+@click.option("--overwrite", type=click.BOOL, default=False)
+def cli(directory: str, overwrite: bool=False):
+    rotator = Rotator(directory, overwrite)
     rotator.analyze_images()
 
 
