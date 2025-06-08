@@ -1,10 +1,12 @@
 import logging
 import os
 from concurrent.futures import ProcessPoolExecutor
+from typing import Optional
 
 import click
 import cv2
 import dlib
+from tqdm import tqdm
 from jpegtran import JPEGImage
 
 
@@ -41,18 +43,18 @@ class Rotator:
 
 def init_worker(overwrite: bool=False):
     global rotator
-    print("Initialize worker...")
     rotator = Rotator(overwrite)
 
 
-def worker(filepath: str):
+def worker(filepath: str) -> Optional[str]:
     global rotator
     rotation = rotator.analyze_image(filepath)
     if rotation:
-        print(f" - {filepath} (Rotated {rotation} Degrees)")
         img = JPEGImage(filepath)
         img = img.rotate(rotation)
         rotator.save_image(img, filepath)
+        return f"- {filepath} (Rotated {rotation} degrees)"
+    return None
 
 
 @click.command()
@@ -70,11 +72,16 @@ def cli(directory: str, overwrite: bool=False, max_workers: int=None):
                 file_path = str(os.path.join(root_dir, file_name))
                 images.append(file_path)
 
+    print(f"Workers: {max_workers}")
     print(f"Processing {len(images)} images...")
 
     # Analyze each image file path to identify the amount of rotation.
     with ProcessPoolExecutor(max_workers=max_workers, initializer=init_worker, initargs=(overwrite,)) as executor:
-        list(executor.map(worker, images))
+        with tqdm(total=len(images), desc="Processing") as progress_bar:
+            for result in executor.map(worker, images):
+                if result is not None:
+                    progress_bar.write(result)
+                progress_bar.update(1)
 
 
 if __name__ == "__main__":
