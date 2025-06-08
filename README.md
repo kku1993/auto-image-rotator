@@ -1,4 +1,4 @@
-# Auto Image Rotator
+# Automatic, Lossless JPEG Rotator
 
 ## Change note
 
@@ -34,4 +34,4 @@ After the one-time setup, rotating a directory of images is as simple as running
 python3 rotate.py {IMAGE_PATH}
 ```
 
-By default, rotated images are saved as new files with a `*-rotated` filename pattern in your `IMAGES_PATH` directory. If you're comfortable overwriting your original files with rotated versions you may use the `--overwrite` param.
+By default, rotated images are saved as new files with a `*-rotated` filename pattern in your `IMAGES_PATH` directory. If you're comfortable overwriting your original files with rotated versions you may use the `--overwrite=true` param.
