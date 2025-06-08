@@ -2,8 +2,8 @@
 
 ## Change note
 
-- Changes the command line signature
 - This fork implements lossless JPEG transformation and removes png support.
+- Changes the command line signature
 
 ## Overview
 This app uses the OpenCV and Dlib computer vision libraries to auto rotate images based on detected human faces.

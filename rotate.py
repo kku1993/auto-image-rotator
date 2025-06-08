@@ -1,11 +1,10 @@
+import os
+from pathlib import Path
+
 import click
 import cv2
 import dlib
-import numpy as np
-import os
-
-from pathlib import Path
-from PIL import Image, ImageFile
+from jpegtran import JPEGImage
 
 
 class Rotator:
@@ -21,36 +20,37 @@ class Rotator:
         images = []
         for root_dir, sub_dir, files in os.walk(self.directory):
             for file_name in files:
-                if file_name.lower().endswith((".jpeg", ".jpg", ".png")):
+                if file_name.lower().endswith((".jpeg", ".jpg")):
                     file_path = str(os.path.join(root_dir, file_name))
                     images.append(file_path)
 
-        # Analyze each image file path - rotating when needed.
+        # Analyze each image file path to identify the amount of rotation.
         rotations = {}
         with click.progressbar(images, label=f"Analyzing {len(images)} Images...") as filepaths:
             for filepath in filepaths:
-                image = self.open_image(filepath)
-                rotation = self.analyze_image(image, filepath)
-
+                rotation = self.analyze_image(filepath)
                 if rotation:
                     rotations[filepath] = rotation
 
+        # For images that need to be rotated, rotate and save them.
         with click.progressbar(rotations.items(), label=f"Rotating {len(rotations)} Images...") as items:
           for filepath, rotation in items:
                 print(f" - {filepath} (Rotated {rotation} Degrees)")
+                img = JPEGImage(filepath)
+                img = img.rotate(rotation)
+                self.save_image(img, filepath)
 
-    def analyze_image(self, image: ImageFile, filepath: str) -> int:
+
+    def analyze_image(self, filepath: str) -> int:
         """Cycles through 4 image rotations of 90 degrees.
            Saves the image at the current rotation if faces are detected.
         """
+        image = cv2.imread(filepath)
         for cycle in range(0, 4):
             if cycle > 0:
-                # Rotate the image an additional 90 degrees for each non-zero cycle.
-                image = image.rotate(90, expand=True)
+                image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
 
-            image_copy = np.asarray(image)
-            image_gray = cv2.cvtColor(image_copy, cv2.COLOR_BGR2GRAY)
-
+            image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             faces = self.detector(image_gray, 0)
             if len(faces) == 0:
                 continue
@@ -60,24 +60,11 @@ class Rotator:
 
         return 0
 
-    def open_image(self, filepath: str) -> ImageFile:
-        """Intentionally opens an image file using Pillow.
-           If opened with OpenCV, the saved image is a much larger file size than the original
-           (regardless of whether saved via OpenCV or Pillow).
-        """
-        return Image.open(filepath)
-
-    def save_image(self, image: ImageFile, filepath: str) -> bool:
-        """Saves the rotated image using Pillow."""
-
+    def save_image(self, image: JPEGImage, filepath: str) -> bool:
+        filename, ext = os.path.splitext(filepath)
         if not self.overwrite_files:
-            filepath = filepath.replace(".", "-rotated.", 1)
-
-        try:
-            image.save(filepath)
-            return True
-        except:
-            return False
+            filepath = filename + '-rotated' + ext
+        image.save(filepath)
 
 
 @click.command()

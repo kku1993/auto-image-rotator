@@ -3,7 +3,8 @@ FROM python:3.8
 # Update package lists and install:
 # - CMake (for compiling Dlib).
 # - libjpeg8-dev (for jpegtran-cffi)
-RUN apt-get -y update && apt-get -y install build-essential cmake libjpeg8-dev
+# - libturbojpeg-dev (for jpegtran-cffi)
+RUN apt-get -y update && apt-get -y install build-essential cmake libjpeg8-dev libturbojpeg-dev
 
 # Set the container's working directory.
 WORKDIR /app
