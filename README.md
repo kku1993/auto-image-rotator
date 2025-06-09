@@ -1,11 +1,5 @@
 # Automatic, Lossless JPEG Rotator
 
-## Change note
-
-- This fork implements lossless JPEG transformation and removes png support.
-- Changes the command line signature
-- Removed docker setup
-
 ## Overview
 This app uses the OpenCV and Dlib computer vision libraries to auto rotate images based on detected human faces.
 
@@ -13,7 +7,10 @@ This app uses the OpenCV and Dlib computer vision libraries to auto rotate image
 
 Currently, this is only effective for images that contain one or more face. In the future, [advanced CNN techniques](https://d4nst.github.io/2017/01/12/image-orientation/) could be implemented to auto correct the rotation for any photo.
 
-![title](images/example-before-after.jpg)
+## Features
+
+- Lossless JPEG transformation.
+- Parallel processing across CPU cores.
 
 ## Setup
 
